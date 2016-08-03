@@ -1,0 +1,250 @@
+class.AuthLdap.php
+LDAP Authentication and basic User management class for PHP - version 0.2
+http://www.markround.com/unix
+
+Contents
+1. Introduction
+2. License
+3. FAQ
+4. Changelog
+5 . Usage and examples
+6 . Detailed class reference
+7 . Misc
+
+
+
+1. Introduction
+This is the documentation for class.AuthLdap.php, a LDAP authentication and user 
+management class for PHP. It provides a mechanism for easily authenticating
+users against an LDAP database, as well as extracting information, changing 
+passwords and the like. It's not intended to be a full-blown all singing, all 
+dancing LDAP access class - rather, it performs a few basic, frequently used 
+functions.
+
+Everytime I undertake a project in PHP, I end up writing many utility classes to
+perform various functions, and this was one that I felt would be useful to the
+public in general, so here it is. It's very basic, and could do with
+optimisation in several areas, but as far as I know there are no major bugs.
+
+If you're looking for more information on PHP and LDAP, see the PHP manual on 
+the php.net website - it's a superb source of information, and the user comments 
+are very helpful.
+
+2. License
+This class, and all associated documentation is released under the Gnu General
+Public License (GPL). A copy of this is included in the downloadable archive. 
+
+All I ask is that if you find any bugs in the code, or have some improvements, 
+that you send them back to me. Otherwise, feel free to do what you want with the 
+code, within the limits of the license. Of course, an email saying that you're 
+using the class would be welcome too - it'd be nice to know that people are 
+getting some kind of use from this :)
+
+3. FAQ
+As this class has not been publicly available for very long, there haven't been 
+many FAQs. If you have a question about this class, please email me, and I'll do 
+my best to answer your question and include it in later revisions of this 
+documents.
+
+Q: What LDAP servers does this class work with ?
+A: It should work with nearly everything - LDAP being an open standard. However, 
+I have only tried it with Sun's iPlanet Directory Server (now called "Sun One".) 
+Version 0.2 includes changes made by Michael Joseph (michael@jamwarehouse.com)
+so that it works on Microsoft Active Directory.
+
+I have kept the specific implementation details easily changeable - read the 
+usage documentation/source code for more examples. If you get it running on any
+other servers, please email me and let me know so I can update this 
+documentation.
+
+Q: Are there any specific gotchas with this class ?
+A: Two spring to mind. For iPlanet,if you want users to be able to
+change their passwords, you'll have to create an ACL allowing them to do this (
+and any other attributes you want to let them change). The iPlanet documentation
+should tell you everything you need to know.
+
+Secondly, Active Directory does not allow anonymous searching, so you will need
+to specify a username and password for an account with permissions to search the
+directory. You'll also need to set your domain - this is discussed in the 
+documentation.
+
+
+Q: Does this class allow for the creation of users accounts ?
+A: No. It's primary purpose was to authenticate users, and then extra
+functionality got tacked on as the project progressed. However, the adding of 
+users was done by a separate script so wasn't needed by this class. 
+
+Q: I downloaded the class and the files are unreadable - there's no line breaks!
+A: You're probably on Windows, and have downloaded the Unix version instead of 
+the Windows one. Go and grab the .zip file instead of the .tar.gz one.
+
+Q: Where can I get updated versions of this class ?
+A: New versions of this class will always be available from my website 
+(http://www.markround.com/unix/)
+
+4. Changelog 
+version 0.2, 11.04.2003, Michael Joseph <michael@jamwarehouse.com> 
+* - Added switches and workarounds for Active Directory integration 
+* - Change documentation to phpdoc style (http://phpdocu.sourceforge.net) 
+* - Added a constructor 
+* - Added an attribute array parameter to the getUsers method
+* - Generated PHPDoc reference and included online and in package (Mark Round)
+
+
+5. Usage and Examples
+This section will give a basic overview of some of the usage of this class.
+There are several more useful methods besides the ones discussed in this 
+section, for more detailed information of each of these, please see the
+source code and the PHPDoc reference.
+
+5.1 Initialisation and connecting to a LDAP server
+After including the script and creating a new instance of the AuthLdap class,
+you need to specify the LDAP servers you wish to connect to, and then you need 
+to specify the base DN. After this is done, you can then connect to the server. 
+
+This must be done before you can access any of the other methods.
+You specify the server(s) by creating a 2-dimensional array with a new "row" for
+each server you wish to connect to. If the class cannot connect to the first
+server, it will try the second, and so on. This is useful if you wish to have
+redundant servers in case one goes down. You can specify hostnames or IP
+addresses in this array - both will work (if you use hostnames, the web server 
+obvisuoly must have some way of resolving hostnames.)
+
+Both the server and base DN attributes are set through the class properties 
+$server and $dn respectively.
+
+For Active Directory, you need to set the server type, domain, and search user 
+properties. All examples in the documentation are for iPlanet, as I do not have
+an Active Directory server to test on, however usage should be exactly the same
+assuming these properties are set. For more information, see the source code, 
+or the PHPDoc files at www.markround.com/unix/ldapdocs/.
+
+Example:
+
+<?
+include "class.AuthLdap.php";
+
+$ldap = new AuthLdap();
+$server[0] = "10.1.1.1"; // Primary LDAP server
+$server[1] = "10.1.1.2"; // Replica LDAP server
+$ldap->server = $server;
+$ldap->dn = "dc=foo,dc=com"; // Base DN of our organisation
+
+if ( $ldap->connect()) {
+  echo "Connected OK!";
+} else {
+  echo "There was a problem.<br>";
+  echo "Error code : " . $ldap->ldapErrorCode . "<br>";
+  echo "Error text : " . $ldap->ldapErrorText . "<br>";
+}
+?>
+
+
+
+5.2 Authenticating users
+Authenticating users is done through the checkPass method. It takes two 
+parameters, the username and plaintext password. This assumes that the users are 
+stored under the "People" branch of your LDAP server. If this is not the case, 
+you'll need to set the "people" property accordingly. You can only authenticate 
+users AFTER connecting successfully to a LDAP server. Again, for Active 
+Directory, you'll need to set a domain.
+
+Example :
+
+<?
+if ($ldap->checkPass( "username","password")) {
+  echo "Password OK!";
+} else {
+  echo "Password check failed.<br>";
+  echo "Error code : " . $ldap->ldapErrorCode . "<br>";
+  echo "Error text : " . $ldap->ldapErrorText . "<br>";
+}
+?>
+
+
+5.3 Changing passwords
+Assuming that the users have an ACL set on the LDAP server permitting them to 
+change their passwords, this can be done through the changePass method which 
+takes three parameters - their username, old password, and new password.
+
+Example :
+<?
+if ($ldap->changePass( "username","oldpassword","newpassword")) {
+  echo "Password change OK!";
+} else {
+  echo "Password change failed.<br>";
+  echo "Error code : " . $ldap->ldapErrorCode . "<br>";
+  echo "Error text : " . $ldap->ldapErrorText . "<br>";
+}
+?>
+
+5.4 Retrieving attributes
+Attributes can be retrieved using the "getAttribute" method. This will return an 
+array of the returned values. Normally, there would only be one value
+returned, but some attributes may have several values stored in them - for
+instance, multiple email addresses.
+
+
+Example :
+
+<?
+if ($attrib = $ldap->getAttribute ( "username","mail")) {
+  echo "First returned email address : ".$attrib[0];
+} else {
+  echo "There was a problem.<br>";
+  echo "Error code : " . $ldap->ldapErrorCode . "<br>";
+  echo "Error text : " . $ldap->ldapErrorText . "<br>";
+}
+?>
+
+5.5 Closing the connection
+Once you have finished with your LDAP connection, you should close it down to 
+free resources. This is done with the close() method, which takes no parameters.
+
+Example :
+
+<?
+if ($ldap->close()) {
+  echo "Connection closed!";
+} else {
+  echo "Connection close failed.<br>";
+  echo "Error code : " . $ldap->ldapErrorCode . "<br>";
+  echo "Error text : " . $ldap->ldapErrorText . "<br>";
+}
+?>
+
+
+5.6 Error handling
+This class will not generate fatal LDAP errors if a query encounters a problem.
+Instead, each method will return false if it encountered problems, and set the
+ldapErrorText and ldapErrorCode variables accordingly. It usually sets these to 
+codes returned from the LDAP server, but in some cases uses an internal code of 
+"-1", and some corresponding error text. For example, if it could not connect to 
+the server, it obviously won't return a proper error code, so instead
+uses "-1, Could not connect to any server."
+
+In order to catch these errors, you should check what each method returns, as 
+detailed in the examples above. If you wish to change the behavior of the class
+so it does produce fatal errors in some instances, you can remove the @ symbol 
+before several LDAP calls - but this is recommended for advanced users only.
+
+Some common error codes returned when using iPlanet are :
+
+19 - Account locked out (too many invalid login attempts)
+32 - User does not exist
+49 - Wrong password
+53 - Account inactive (manually locked out by administrator)
+
+
+
+6. Detailed class reference
+This section of the documentation is now depreciated. For a full reference 
+guide to the class, see the PHPDoc generated reference at 
+http://www.markround.com/unix/ldapdocs/ (or included in the downloaded archive)
+in conjunction with the annotated source code.
+
+7. Misc
+Not much else to say here - just thought I'd give "props" to my Linux User Group 
+for being such a great bunch of people :) If you're in the Surrey area of the 
+UK, and want to meet up with fellow Linux users have a look at our website 
+(http://www.surrey.lug.org.uk)
